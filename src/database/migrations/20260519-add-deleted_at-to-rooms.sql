@@ -1,0 +1,2 @@
+ALTER TABLE rooms
+ADD COLUMN deleted_at TIMESTAMP NULL;

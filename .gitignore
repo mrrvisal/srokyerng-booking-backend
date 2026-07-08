@@ -1,0 +1,10 @@
+node_modules
+.env
+uploads/**
+!uploads/
+!uploads/**/
+!uploads/**/.gitkeep
+.DS_Store
+
+# Local practice files
+practice/

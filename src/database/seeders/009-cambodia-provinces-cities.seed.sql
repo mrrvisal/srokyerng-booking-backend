@@ -1,0 +1,58 @@
+-- Insert Cambodia
+INSERT IGNORE INTO countries (id, name) VALUES (1, 'Cambodia');
+
+-- Insert the 25 Provinces of Cambodia
+INSERT IGNORE INTO provinces (id, country_id, name) VALUES
+(1, 1, 'Banteay Meanchey'),
+(2, 1, 'Battambang'),
+(3, 1, 'Kampong Cham'),
+(4, 1, 'Kampong Chhnang'),
+(5, 1, 'Kampong Speu'),
+(6, 1, 'Kampong Thom'),
+(7, 1, 'Kampot'),
+(8, 1, 'Kandal'),
+(9, 1, 'Kep'),
+(10, 1, 'Koh Kong'),
+(11, 1, 'Kratie'),
+(12, 1, 'Mondulkiri'),
+(13, 1, 'Phnom Penh'),
+(14, 1, 'Preah Vihear'),
+(15, 1, 'Prey Veng'),
+(16, 1, 'Pursat'),
+(17, 1, 'Ratanakiri'),
+(18, 1, 'Siem Reap'),
+(19, 1, 'Preah Sihanouk'),
+(20, 1, 'Stung Treng'),
+(21, 1, 'Svay Rieng'),
+(22, 1, 'Takeo'),
+(23, 1, 'Oddar Meanchey'),
+(24, 1, 'Pailin'),
+(25, 1, 'Tboung Khmum');
+
+-- Insert matching cities for each province so they show up in the Hero search filter
+INSERT IGNORE INTO cities (id, province_id, name) VALUES
+(1, 1, 'Banteay Meanchey'),
+(2, 2, 'Battambang'),
+(3, 3, 'Kampong Cham'),
+(4, 4, 'Kampong Chhnang'),
+(5, 5, 'Kampong Speu'),
+(6, 6, 'Kampong Thom'),
+(7, 7, 'Kampot'),
+(8, 8, 'Kandal'),
+(9, 9, 'Kep'),
+(10, 10, 'Koh Kong'),
+(11, 11, 'Kratie'),
+(12, 12, 'Mondulkiri'),
+(13, 13, 'Phnom Penh'),
+(14, 14, 'Preah Vihear'),
+(15, 15, 'Prey Veng'),
+(16, 16, 'Pursat'),
+(17, 17, 'Ratanakiri'),
+(18, 18, 'Siem Reap'),
+(19, 19, 'Preah Sihanouk'),
+(20, 20, 'Stung Treng'),
+(21, 21, 'Svay Rieng'),
+(22, 22, 'Takeo'),
+(23, 23, 'Oddar Meanchey'),
+(24, 24, 'Pailin'),
+(25, 25, 'Tboung Khmum');
