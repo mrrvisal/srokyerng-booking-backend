@@ -58,7 +58,7 @@ const sendPasswordResetEmail = async ({ to, fullName, resetUrl }) => {
     <a href="${resetUrl}" class="link">${resetUrl}</a></p>
   `;
 
-  await emailService.sendEmail({
+  const result = await emailService.sendEmailIfConfigured({
     to,
     subject: "Reset your SrokYerng Booking password",
     text: [
@@ -71,6 +71,15 @@ const sendPasswordResetEmail = async ({ to, fullName, resetUrl }) => {
     ].join("\n"),
     html: getHtmlTemplate("Reset your password", content),
   });
+
+  if (result.skipped) {
+    console.warn(
+      `[email] SMTP not configured — password reset email NOT sent to ${to}. ` +
+        `Fallback: reset link (valid 1h): ${resetUrl}`
+    );
+  }
+
+  return result;
 };
 
 const sendEmailVerificationEmail = async ({ to, fullName, verificationUrl }) => {
@@ -86,7 +95,7 @@ const sendEmailVerificationEmail = async ({ to, fullName, verificationUrl }) => 
     <a href="${verificationUrl}" class="link">${verificationUrl}</a></p>
   `;
 
-  await emailService.sendEmail({
+  const result = await emailService.sendEmailIfConfigured({
     to,
     subject: "Verify your SrokYerng Booking email",
     text: [
@@ -99,6 +108,15 @@ const sendEmailVerificationEmail = async ({ to, fullName, verificationUrl }) => 
     ].join("\n"),
     html: getHtmlTemplate("Verify your email", content),
   });
+
+  if (result.skipped) {
+    console.warn(
+      `[email] SMTP not configured — verification email NOT sent to ${to}. ` +
+        `Fallback: verification link (valid 24h): ${verificationUrl}`
+    );
+  }
+
+  return result;
 };
 
 module.exports = {

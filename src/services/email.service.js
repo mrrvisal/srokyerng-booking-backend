@@ -4,7 +4,28 @@ const env = require("../config/env");
 let transporter;
 
 const isSmtpConfigured = () => {
-  return Boolean(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASSWORD && env.SMTP_FROM);
+  // SMTP_FROM is optional — the From address is derived in buildFromAddress().
+  return Boolean(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASSWORD);
+};
+
+/**
+ * Build the From address.
+ *
+ * Gmail's SMTP only lets you send FROM your own Gmail address (or an alias you
+ * own). A generic "no-reply@example.com" is rejected at send time, which used
+ * to surface as a 500 during forgot-password — so for Gmail hosts we force the
+ * address to the authenticated SMTP_USER while keeping a friendly display name.
+ */
+const buildFromAddress = () => {
+  const isGmailHost = /(^|\.)gmail\.com$/i.test(env.SMTP_HOST || "");
+
+  if (isGmailHost) {
+    const displayName =
+      (env.SMTP_FROM || "").match(/^([^<]*)/)?.[1]?.trim() || "SrokYerng Booking";
+    return `"${displayName}" <${env.SMTP_USER}>`;
+  }
+
+  return env.SMTP_FROM || `SrokYerng Booking <${env.SMTP_USER}>`;
 };
 
 const getTransporter = () => {
@@ -31,7 +52,7 @@ const getTransporter = () => {
 
 const sendEmail = async ({ to, subject, text, html }) => {
   await getTransporter().sendMail({
-    from: env.SMTP_FROM,
+    from: buildFromAddress(),
     to,
     subject,
     text,
@@ -56,6 +77,7 @@ const sendEmailIfConfigured = async ({ to, subject, text, html }) => {
 
 module.exports = {
   isSmtpConfigured,
+  buildFromAddress,
   sendEmail,
   sendEmailIfConfigured,
 };
