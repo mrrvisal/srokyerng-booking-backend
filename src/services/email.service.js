@@ -44,6 +44,11 @@ const getTransporter = () => {
         user: env.SMTP_USER,
         pass: env.SMTP_PASSWORD,
       },
+      // Fail fast when the SMTP host is unreachable instead of hanging the
+      // HTTP request for minutes (observed on Render when egress is slow).
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
     });
   }
 

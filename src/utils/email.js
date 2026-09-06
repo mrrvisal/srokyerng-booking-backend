@@ -45,6 +45,19 @@ const getHtmlTemplate = (title, contentHtml) => `
 </html>
 `;
 
+const sendEmailWithFallback = async (payload, fallbackDetail) => {
+  try {
+    const result = await emailService.sendEmailIfConfigured(payload);
+    return result;
+  } catch (error) {
+    // An SMTP failure (bad creds, rejected sender, network timeout) must never
+    // bubble up as a 500 or hang the endpoint — log it loudly and degrade.
+    console.error(`[email] send failed (${payload.subject}):`, error.message);
+    console.error(`[email] Fallback — ${fallbackDetail}`);
+    return { skipped: true, reason: error.message };
+  }
+};
+
 const sendPasswordResetEmail = async ({ to, fullName, resetUrl }) => {
   const content = `
     <h1>Reset Your Password</h1>
@@ -58,19 +71,22 @@ const sendPasswordResetEmail = async ({ to, fullName, resetUrl }) => {
     <a href="${resetUrl}" class="link">${resetUrl}</a></p>
   `;
 
-  const result = await emailService.sendEmailIfConfigured({
-    to,
-    subject: "Reset your SrokYerng Booking password",
-    text: [
-      `Hello ${fullName},`,
-      "",
-      "Use this link to reset your password:",
-      resetUrl,
-      "",
-      "This link expires in 1 hour. If you did not request this, you can ignore this email.",
-    ].join("\n"),
-    html: getHtmlTemplate("Reset your password", content),
-  });
+  const result = await sendEmailWithFallback(
+    {
+      to,
+      subject: "Reset your SrokYerng Booking password",
+      text: [
+        `Hello ${fullName},`,
+        "",
+        "Use this link to reset your password:",
+        resetUrl,
+        "",
+        "This link expires in 1 hour. If you did not request this, you can ignore this email.",
+      ].join("\n"),
+      html: getHtmlTemplate("Reset your password", content),
+    },
+    `reset link (valid 1h): ${resetUrl}`
+  );
 
   if (result.skipped) {
     console.warn(
@@ -95,19 +111,22 @@ const sendEmailVerificationEmail = async ({ to, fullName, verificationUrl }) => 
     <a href="${verificationUrl}" class="link">${verificationUrl}</a></p>
   `;
 
-  const result = await emailService.sendEmailIfConfigured({
-    to,
-    subject: "Verify your SrokYerng Booking email",
-    text: [
-      `Hello ${fullName},`,
-      "",
-      "Use this link to verify your email address:",
-      verificationUrl,
-      "",
-      "This link expires in 24 hours. If you did not create this account, you can ignore this email.",
-    ].join("\n"),
-    html: getHtmlTemplate("Verify your email", content),
-  });
+  const result = await sendEmailWithFallback(
+    {
+      to,
+      subject: "Verify your SrokYerng Booking email",
+      text: [
+        `Hello ${fullName},`,
+        "",
+        "Use this link to verify your email address:",
+        verificationUrl,
+        "",
+        "This link expires in 24 hours. If you did not create this account, you can ignore this email.",
+      ].join("\n"),
+      html: getHtmlTemplate("Verify your email", content),
+    },
+    `verification link (valid 24h): ${verificationUrl}`
+  );
 
   if (result.skipped) {
     console.warn(
