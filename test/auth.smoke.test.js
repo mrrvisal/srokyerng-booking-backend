@@ -742,6 +742,7 @@ test("auth service logs in an active user and returns access and refresh tokens"
       profile_image_url: null,
       last_login: "2026-05-10T10:00:00.000Z",
       email_verified_at: null,
+      google_linked: false,
     });
     assert.equal(calls.findUserByEmail, "customer@example.com");
     assert.deepEqual(calls.comparePassword, {
@@ -1039,6 +1040,7 @@ test("auth service fetches the current active user safely", async () => {
       profile_image_url: null,
       last_login: null,
       email_verified_at: null,
+      google_linked: false,
     });
     assert.equal(Object.hasOwn(user, "password_hash"), false);
   } finally {
