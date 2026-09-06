@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const app = require("./app");
 const pool = require("./config/db");
 const env = require("./config/env");
+const { isAllowedOrigin } = require("./config/cors");
 const { startAutoCompleteScheduler } = require("./services/reservationScheduler");
 const { setIO } = require("./services/socket.registry");
 
@@ -16,7 +17,17 @@ const listenWithFallback = (startPort) => {
   const { Server } = require("socket.io");
   const io = new Server(server, {
     cors: {
-      origin: env.FRONTEND_URLS,
+      // Mirrors the Express CORS policy (see src/config/cors.js) so the
+      // socket handshake and the REST API allow exactly the same origins.
+      origin(origin, callback) {
+        if (isAllowedOrigin(origin)) {
+          return callback(null, true);
+        }
+
+        const error = new Error(`CORS origin not allowed: ${origin}`);
+        error.statusCode = 403;
+        return callback(error);
+      },
       credentials: true,
     },
   });
