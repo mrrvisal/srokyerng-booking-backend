@@ -1,6 +1,10 @@
+const path = require("path");
 const dotenv = require("dotenv");
 
-dotenv.config();
+// Load the backend's own .env from its real location, no matter which folder
+// the process happens to be started from, so injected values can never come
+// from a neighboring project's .env.
+dotenv.config({ path: path.resolve(__dirname, "../..", ".env") });
 
 const parseNumber = (value, fallback) => {
   const parsed = Number(value);
@@ -43,6 +47,8 @@ const env = {
   DB_USER: getRequired("DB_USER"),
   DB_PASSWORD: process.env.DB_PASSWORD || "",
   DB_NAME: getRequired("DB_NAME"),
+  SSL_CERT_PATH: process.env.SSL_CERT_PATH || "",
+  DB_SSL: process.env.DB_SSL === "true",
   JWT_SECRET: getRequired("JWT_SECRET"),
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "15m",
   REFRESH_TOKEN_EXPIRES_DAYS: parseNumber(process.env.REFRESH_TOKEN_EXPIRES_DAYS, 30),
@@ -63,25 +69,22 @@ const env = {
   NODE_ENV: process.env.NODE_ENV || "development",
 };
 
-// These two are easy to get right in dev and forget to harden before a real
-// deploy, so fail loudly in production and just warn otherwise.
+// Security guards: fail loudly in production. Dev-mode notices are suppressed
+// to keep local output clean (REFRESH_TOKEN_COOKIE_SECURE=false and a short
+// JWT_SECRET are normal during development).
 const isProduction = env.NODE_ENV === "production";
 const weakJwtSecret = env.JWT_SECRET.length < 32;
 const insecureRefreshCookie = !env.REFRESH_TOKEN_COOKIE_SECURE;
 
-if (weakJwtSecret) {
-  const message = `JWT_SECRET is only ${env.JWT_SECRET.length} characters long — use a long, random value (32+ chars, e.g. \`openssl rand -hex 32\`).`;
-  if (isProduction) throw new Error(message);
-  console.warn(`[env] Warning: ${message}`);
+if (weakJwtSecret && isProduction) {
+  throw new Error(
+    `JWT_SECRET is only ${env.JWT_SECRET.length} characters long — use a long, random value (32+ chars).`
+  );
 }
 
 if (insecureRefreshCookie && isProduction) {
   throw new Error(
-    "REFRESH_TOKEN_COOKIE_SECURE must be \"true\" in production (refresh-token cookie must be HTTPS-only)."
-  );
-} else if (insecureRefreshCookie) {
-  console.warn(
-    "[env] Warning: REFRESH_TOKEN_COOKIE_SECURE is false — fine for local HTTP dev, but must be \"true\" before any production/HTTPS deploy."
+    'REFRESH_TOKEN_COOKIE_SECURE must be "true" in production (refresh-token cookie must be HTTPS-only).'
   );
 }
 

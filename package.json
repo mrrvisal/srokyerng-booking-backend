@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "test": "node --test",
     "seed:admin": "node scripts/create-admin.js",
+    "seed:demo": "node scripts/run-seed.js src/database/seeders/010-demo-data.seed.sql",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -16,6 +17,9 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",

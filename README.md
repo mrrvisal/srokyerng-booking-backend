@@ -56,6 +56,8 @@ cp .env.example .env
 - `DB_USER`
 - `DB_PASSWORD`
 - `DB_NAME`
+- `SSL_CERT_PATH` (CA bundle path for managed MySQL/TiDB Cloud Serverless that mandates TLS, e.g. `/etc/ssl/cert.pem`; leave empty for local MySQL)
+- `DB_SSL` (set `true` to force TLS without a CA file — dev only, skips certificate verification)
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
 - `REFRESH_TOKEN_EXPIRES_DAYS`
