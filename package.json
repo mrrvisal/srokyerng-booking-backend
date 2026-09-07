@@ -11,7 +11,8 @@
     "seed:demo": "node scripts/run-seed.js src/database/seeders/010-demo-data.seed.sql",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:email": "node scripts/test-email.js"
   },
   "keywords": [],
   "author": "",
