@@ -68,6 +68,8 @@ const env = {
   SMTP_SECURE: process.env.SMTP_SECURE === "true",
   RESEND_API_KEY: process.env.RESEND_API_KEY || "",
   RESEND_FROM: process.env.RESEND_FROM || "",
+  SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || "",
+  SENDGRID_FROM: process.env.SENDGRID_FROM || "",
   NODE_ENV: process.env.NODE_ENV || "development",
 };
 

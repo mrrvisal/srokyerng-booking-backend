@@ -4,6 +4,7 @@ const env = require("../config/env");
 let transporter;
 
 const RESEND_API_URL = "https://api.resend.com/emails";
+const SENDGRID_API_URL = "https://api.sendgrid.com/v3/mail/send";
 
 const isSmtpConfigured = () => {
   // SMTP_FROM is optional — the From address is derived in buildFromAddress().
@@ -11,16 +12,18 @@ const isSmtpConfigured = () => {
 };
 
 const isResendConfigured = () => Boolean(env.RESEND_API_KEY);
+const isSendGridConfigured = () => Boolean(env.SENDGRID_API_KEY);
 
 /**
- * Build the From address.
+ * Build the From address (used by SMTP and, if SENDGRID_FROM is unset, by
+ * SendGrid too).
  *
  * Gmail's SMTP only lets you send FROM your own Gmail address (or an alias you
  * own). A generic "no-reply@example.com" is rejected at send time, which used
  * to surface as a 500 during forgot-password — so for Gmail hosts we force the
  * address to the authenticated SMTP_USER while keeping a friendly display name.
  */
-const buildFromAddress = () => {
+const buildFromAddress = (fallbackFrom = `SrokYerng Booking <${env.SMTP_USER}>`) => {
   const isGmailHost = /(^|\.)gmail\.com$/i.test(env.SMTP_HOST || "");
 
   if (isGmailHost) {
@@ -29,10 +32,11 @@ const buildFromAddress = () => {
     return `"${displayName}" <${env.SMTP_USER}>`;
   }
 
-  return env.SMTP_FROM || `SrokYerng Booking <${env.SMTP_USER}>`;
+  return env.SMTP_FROM || fallbackFrom;
 };
 
 const getResendFrom = () => env.RESEND_FROM || "SrokYerng Booking <onboarding@resend.dev>";
+const getSendGridFrom = () => env.SENDGRID_FROM || buildFromAddress("SrokYerng Booking <no-reply@sendgrid.com>");
 
 const getTransporter = () => {
   if (!transporter) {
@@ -81,6 +85,42 @@ const sendViaResend = async ({ to, subject, text, html }) => {
   return true;
 };
 
+const sendViaSendGrid = async ({ to, subject, text, html }) => {
+  // SendGrid wants the From split into name/email or "Name <email>" as one
+  // string — it accepts a single string in personalizations. We parse the
+  // display name + address from a standard "Name <email>" From value.
+  const from = getSendGridFrom();
+  const match = from.match(/^(?:"?([^"<]*)"?\s*<([^>]+)>|([^<>\s]+@[^<>\s]+))$/);
+  const fromName = (match?.[1] || match?.[3] || from).trim();
+  const fromEmail = (match?.[2] || match?.[3] || from).trim();
+
+  const response = await fetch(SENDGRID_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.SENDGRID_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: fromEmail, name: fromName || undefined },
+      subject,
+      content: [
+        { type: "text/plain", value: text },
+        { type: "text/html", value: html },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(
+      `SendGrid API responded ${response.status}: ${String(body).slice(0, 300)}`
+    );
+  }
+
+  return true;
+};
+
 const sendViaSmtp = async ({ to, subject, text, html }) => {
   await getTransporter().sendMail({
     from: buildFromAddress(),
@@ -94,26 +134,38 @@ const sendViaSmtp = async ({ to, subject, text, html }) => {
 };
 
 const sendEmail = async (payload) => {
-  // Prefer the Resend HTTPS API — outbound 443 is never blocked on Render,
-  // whereas SMTP egress (port 587) can be black-holed. SMTP remains the
-  // fallback for local dev and self-hosted setups.
-  if (isResendConfigured()) {
+  // Prefer HTTPS APIs — outbound 443 is never blocked on Render, whereas SMTP
+  // egress (port 587) can be black-holed. Chain: Resend → SendGrid → SMTP.
+  const provider = isResendConfigured()
+    ? "resend"
+    : isSendGridConfigured()
+      ? "sendgrid"
+      : "smtp";
+
+  if (provider === "resend") {
     await sendViaResend(payload);
+  } else if (provider === "sendgrid") {
+    await sendViaSendGrid(payload);
   } else {
     await sendViaSmtp(payload);
   }
 
   return {
     skipped: false,
-    provider: isResendConfigured() ? "resend" : "smtp",
+    provider,
   };
 };
 
 const sendEmailIfConfigured = async ({ to, subject, text, html }) => {
-  if (!isResendConfigured() && !isSmtpConfigured()) {
+  if (
+    !isResendConfigured() &&
+    !isSendGridConfigured() &&
+    !isSmtpConfigured()
+  ) {
     return {
       skipped: true,
-      reason: "Email configuration is missing (set RESEND_API_KEY or SMTP_*)",
+      reason:
+        "Email configuration is missing (set RESEND_API_KEY, SENDGRID_API_KEY, or SMTP_*)",
     };
   }
 
@@ -123,8 +175,10 @@ const sendEmailIfConfigured = async ({ to, subject, text, html }) => {
 module.exports = {
   isSmtpConfigured,
   isResendConfigured,
+  isSendGridConfigured,
   buildFromAddress,
   getResendFrom,
+  getSendGridFrom,
   sendEmail,
   sendEmailIfConfigured,
 };
