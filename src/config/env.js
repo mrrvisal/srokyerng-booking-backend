@@ -66,6 +66,8 @@ const env = {
   SMTP_PASSWORD: process.env.SMTP_PASSWORD || "",
   SMTP_FROM: process.env.SMTP_FROM || "",
   SMTP_SECURE: process.env.SMTP_SECURE === "true",
+  RESEND_API_KEY: process.env.RESEND_API_KEY || "",
+  RESEND_FROM: process.env.RESEND_FROM || "",
   NODE_ENV: process.env.NODE_ENV || "development",
 };
 

@@ -3,10 +3,14 @@ const env = require("../config/env");
 
 let transporter;
 
+const RESEND_API_URL = "https://api.resend.com/emails";
+
 const isSmtpConfigured = () => {
   // SMTP_FROM is optional — the From address is derived in buildFromAddress().
   return Boolean(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASSWORD);
 };
+
+const isResendConfigured = () => Boolean(env.RESEND_API_KEY);
 
 /**
  * Build the From address.
@@ -28,13 +32,9 @@ const buildFromAddress = () => {
   return env.SMTP_FROM || `SrokYerng Booking <${env.SMTP_USER}>`;
 };
 
-const getTransporter = () => {
-  if (!isSmtpConfigured()) {
-    const error = new Error("SMTP email configuration is missing");
-    error.statusCode = 500;
-    throw error;
-  }
+const getResendFrom = () => env.RESEND_FROM || "SrokYerng Booking <onboarding@resend.dev>";
 
+const getTransporter = () => {
   if (!transporter) {
     transporter = nodemailer.createTransport({
       host: env.SMTP_HOST,
@@ -55,7 +55,33 @@ const getTransporter = () => {
   return transporter;
 };
 
-const sendEmail = async ({ to, subject, text, html }) => {
+const sendViaResend = async ({ to, subject, text, html }) => {
+  const response = await fetch(RESEND_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: getResendFrom(),
+      to,
+      subject,
+      text,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(
+      `Resend API responded ${response.status}: ${String(body).slice(0, 300)}`
+    );
+  }
+
+  return true;
+};
+
+const sendViaSmtp = async ({ to, subject, text, html }) => {
   await getTransporter().sendMail({
     from: buildFromAddress(),
     to,
@@ -64,16 +90,30 @@ const sendEmail = async ({ to, subject, text, html }) => {
     html,
   });
 
+  return true;
+};
+
+const sendEmail = async (payload) => {
+  // Prefer the Resend HTTPS API — outbound 443 is never blocked on Render,
+  // whereas SMTP egress (port 587) can be black-holed. SMTP remains the
+  // fallback for local dev and self-hosted setups.
+  if (isResendConfigured()) {
+    await sendViaResend(payload);
+  } else {
+    await sendViaSmtp(payload);
+  }
+
   return {
     skipped: false,
+    provider: isResendConfigured() ? "resend" : "smtp",
   };
 };
 
 const sendEmailIfConfigured = async ({ to, subject, text, html }) => {
-  if (!isSmtpConfigured()) {
+  if (!isResendConfigured() && !isSmtpConfigured()) {
     return {
       skipped: true,
-      reason: "SMTP email configuration is missing",
+      reason: "Email configuration is missing (set RESEND_API_KEY or SMTP_*)",
     };
   }
 
@@ -82,7 +122,9 @@ const sendEmailIfConfigured = async ({ to, subject, text, html }) => {
 
 module.exports = {
   isSmtpConfigured,
+  isResendConfigured,
   buildFromAddress,
+  getResendFrom,
   sendEmail,
   sendEmailIfConfigured,
 };
