@@ -135,17 +135,17 @@ const sendViaSmtp = async ({ to, subject, text, html }) => {
 
 const sendEmail = async (payload) => {
   // Prefer HTTPS APIs — outbound 443 is never blocked on Render, whereas SMTP
-  // egress (port 587) can be black-holed. Chain: Resend → SendGrid → SMTP.
-  const provider = isResendConfigured()
-    ? "resend"
-    : isSendGridConfigured()
-      ? "sendgrid"
+  // egress (port 587) can be black-holed. Chain: SendGrid → Resend → SMTP.
+  const provider = isSendGridConfigured()
+    ? "sendgrid"
+    : isResendConfigured()
+      ? "resend"
       : "smtp";
 
-  if (provider === "resend") {
-    await sendViaResend(payload);
-  } else if (provider === "sendgrid") {
+  if (provider === "sendgrid") {
     await sendViaSendGrid(payload);
+  } else if (provider === "resend") {
+    await sendViaResend(payload);
   } else {
     await sendViaSmtp(payload);
   }
