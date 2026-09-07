@@ -70,6 +70,8 @@ cp .env.example .env
 - `SMTP_PASSWORD`
 - `SMTP_FROM`
 - `SMTP_SECURE`
+- `RESEND_API_KEY` (optional — recommended for Render/deployments; HTTPS delivery, takes priority over SMTP)
+- `RESEND_FROM` (optional — default `SrokYerng Booking <onboarding@resend.dev>`)
 - `ADMIN_FULL_NAME`
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`

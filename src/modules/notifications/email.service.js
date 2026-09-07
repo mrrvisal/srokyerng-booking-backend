@@ -68,6 +68,7 @@ const sendNotificationEmail = async ({ to, subject, title, message, actionUrl, t
 
 module.exports = {
   isSmtpConfigured: emailService.isSmtpConfigured,
+  isResendConfigured: emailService.isResendConfigured,
   sendEmail: emailService.sendEmailIfConfigured,
   sendNotificationEmail,
 };
