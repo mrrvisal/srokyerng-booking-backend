@@ -70,6 +70,8 @@ const env = {
   RESEND_FROM: process.env.RESEND_FROM || "",
   SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || "",
   SENDGRID_FROM: process.env.SENDGRID_FROM || "",
+  BREVO_API_KEY: process.env.BREVO_API_KEY || "",
+  BREVO_FROM: process.env.BREVO_FROM || "",
   NODE_ENV: process.env.NODE_ENV || "development",
 };
 

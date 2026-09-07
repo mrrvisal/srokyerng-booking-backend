@@ -5,6 +5,7 @@ let transporter;
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const SENDGRID_API_URL = "https://api.sendgrid.com/v3/mail/send";
+const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 const isSmtpConfigured = () => {
   // SMTP_FROM is optional — the From address is derived in buildFromAddress().
@@ -13,6 +14,7 @@ const isSmtpConfigured = () => {
 
 const isResendConfigured = () => Boolean(env.RESEND_API_KEY);
 const isSendGridConfigured = () => Boolean(env.SENDGRID_API_KEY);
+const isBrevoConfigured = () => Boolean(env.BREVO_API_KEY);
 
 /**
  * Build the From address (used by SMTP and, if SENDGRID_FROM is unset, by
@@ -37,6 +39,20 @@ const buildFromAddress = (fallbackFrom = `SrokYerng Booking <${env.SMTP_USER}>`)
 
 const getResendFrom = () => env.RESEND_FROM || "SrokYerng Booking <onboarding@resend.dev>";
 const getSendGridFrom = () => env.SENDGRID_FROM || buildFromAddress("SrokYerng Booking <no-reply@sendgrid.com>");
+
+/** Parse a "Name <email>" (or bare "email") string into { name, email }. */
+const parseFromAddress = (from) => {
+  const match = from.match(/^(?:"?([^"<]*)"?\s*<([^>]+)>|([^<>\s]+@[^<>\s]+))$/);
+  return {
+    name: (match?.[1] || match?.[3] || from).trim(),
+    email: (match?.[2] || match?.[3] || from).trim(),
+  };
+};
+
+const getBrevoFrom = () => {
+  const from = env.BREVO_FROM || buildFromAddress("SrokYerng Booking <no-reply@srokyerng.com>");
+  return parseFromAddress(from);
+};
 
 const getTransporter = () => {
   if (!transporter) {
@@ -121,6 +137,35 @@ const sendViaSendGrid = async ({ to, subject, text, html }) => {
   return true;
 };
 
+const sendViaBrevo = async ({ to, subject, text, html }) => {
+  const sender = getBrevoFrom();
+
+  const response = await fetch(BREVO_API_URL, {
+    method: "POST",
+    headers: {
+      "api-key": env.BREVO_API_KEY,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender,
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(
+      `Brevo API responded ${response.status}: ${String(body).slice(0, 300)}`
+    );
+  }
+
+  return true;
+};
+
 const sendViaSmtp = async ({ to, subject, text, html }) => {
   await getTransporter().sendMail({
     from: buildFromAddress(),
@@ -135,14 +180,18 @@ const sendViaSmtp = async ({ to, subject, text, html }) => {
 
 const sendEmail = async (payload) => {
   // Prefer HTTPS APIs — outbound 443 is never blocked on Render, whereas SMTP
-  // egress (port 587) can be black-holed. Chain: SendGrid → Resend → SMTP.
-  const provider = isSendGridConfigured()
-    ? "sendgrid"
-    : isResendConfigured()
-      ? "resend"
-      : "smtp";
+  // egress (port 587) can be black-holed. Chain: Brevo → SendGrid → Resend → SMTP.
+  const provider = isBrevoConfigured()
+    ? "brevo"
+    : isSendGridConfigured()
+      ? "sendgrid"
+      : isResendConfigured()
+        ? "resend"
+        : "smtp";
 
-  if (provider === "sendgrid") {
+  if (provider === "brevo") {
+    await sendViaBrevo(payload);
+  } else if (provider === "sendgrid") {
     await sendViaSendGrid(payload);
   } else if (provider === "resend") {
     await sendViaResend(payload);
@@ -158,14 +207,15 @@ const sendEmail = async (payload) => {
 
 const sendEmailIfConfigured = async ({ to, subject, text, html }) => {
   if (
-    !isResendConfigured() &&
+    !isBrevoConfigured() &&
     !isSendGridConfigured() &&
+    !isResendConfigured() &&
     !isSmtpConfigured()
   ) {
     return {
       skipped: true,
       reason:
-        "Email configuration is missing (set RESEND_API_KEY, SENDGRID_API_KEY, or SMTP_*)",
+        "Email configuration is missing (set BREVO_API_KEY, SENDGRID_API_KEY, RESEND_API_KEY, or SMTP_*)",
     };
   }
 
@@ -176,9 +226,11 @@ module.exports = {
   isSmtpConfigured,
   isResendConfigured,
   isSendGridConfigured,
+  isBrevoConfigured,
   buildFromAddress,
   getResendFrom,
   getSendGridFrom,
+  getBrevoFrom,
   sendEmail,
   sendEmailIfConfigured,
 };

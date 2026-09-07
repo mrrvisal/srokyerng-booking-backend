@@ -16,10 +16,11 @@ if (!to) {
 
 (async () => {
   console.log("[test-email] provider detection:");
+  console.log("  brevo:    ", emailService.isBrevoConfigured());
   console.log("  sendgrid:", emailService.isSendGridConfigured());
   console.log("  resend:  ", emailService.isResendConfigured());
   console.log("  smtp:    ", emailService.isSmtpConfigured());
-  console.log("  from:    ", emailService.getSendGridFrom());
+  console.log("  from:    ", emailService.getBrevoFrom().email || emailService.getSendGridFrom());
   console.log(`\nSending test email to ${to} ...`);
 
   try {

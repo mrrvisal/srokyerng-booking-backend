@@ -70,9 +70,11 @@ cp .env.example .env
 - `SMTP_PASSWORD`
 - `SMTP_FROM`
 - `SMTP_SECURE`
-- `SENDGRID_API_KEY` (preferred — used first when set; HTTPS delivery, no SMTP egress needed)
-- `SENDGRID_FROM` (optional — must be a verified Single Sender / authenticated domain; e.g. `SrokYerng Booking <you@gmail.com>`)
-- `RESEND_API_KEY` (optional — used when SendGrid is unset; HTTPS delivery)
+- `BREVO_API_KEY` (preferred — used first when set; HTTPS delivery, works on Render)
+- `BREVO_FROM` (optional — must be a sender you verified in Brevo; e.g. `SrokYerng Booking <no-reply@srokyerng.com>`)
+- `SENDGRID_API_KEY` (optional — used when Brevo is unset; must have a verified Single Sender)
+- `SENDGRID_FROM` (optional — verified sender; e.g. `SrokYerng Booking <you@gmail.com>`)
+- `RESEND_API_KEY` (optional — used when Brevo/SendGrid unset; HTTPS delivery)
 - `RESEND_FROM` (optional — default `SrokYerng Booking <onboarding@resend.dev>`)
 - `ADMIN_FULL_NAME`
 - `ADMIN_EMAIL`

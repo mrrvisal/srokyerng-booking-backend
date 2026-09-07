@@ -70,6 +70,7 @@ module.exports = {
   isSmtpConfigured: emailService.isSmtpConfigured,
   isResendConfigured: emailService.isResendConfigured,
   isSendGridConfigured: emailService.isSendGridConfigured,
+  isBrevoConfigured: emailService.isBrevoConfigured,
   sendEmail: emailService.sendEmailIfConfigured,
   sendNotificationEmail,
 };
